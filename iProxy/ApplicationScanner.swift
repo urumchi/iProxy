@@ -3,7 +3,7 @@ import Foundation
 
 enum ApplicationScanner {
     /// Lists launchable .app bundles in the standard system and user locations.
-    static func scan() -> [ManagedApplication] {
+    nonisolated static func scan() -> [ManagedApplication] {
         let directories = [
             URL(fileURLWithPath: "/Applications", isDirectory: true),
             URL(fileURLWithPath: "/System/Applications", isDirectory: true),

@@ -20,12 +20,10 @@ final class AppStore: ObservableObject {
 
     func reloadApplications() {
         isLoading = true
-        Task.detached { [weak self] in
-            let applications = ApplicationScanner.scan()
-            await MainActor.run {
-                self?.applications = applications
-                self?.isLoading = false
-            }
+        Task {
+            let applications = await Task.detached { ApplicationScanner.scan() }.value
+            self.applications = applications
+            self.isLoading = false
         }
     }
 
