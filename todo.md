@@ -141,14 +141,20 @@ Rule Engine
 - [x] 规则热更新：`filterConfiguration` 的 KVO + 2 秒兜底刷新。
 - [x] `RuleStore` 持久化、UI 开关、状态栏提示、`os.Logger` 日志（subsystem `org.mktime.hmccb.iProxy`）。
 - [x] 构建通过、签名含预期 entitlements、扩展已内嵌到 `Contents/Library/SystemExtensions`。
+- [x] 定位首次安装失败原因：`OSSystemExtensionRequest` 要求宿主 App 位于 `/Applications`，否则报 `App containing System Extension to be activated must be in /Applications folder`。
+- [x] 补齐 `NSSystemExtensionUsageDescription`（主 App 与扩展的 Info.plist 各一份），否则 sysextd 拒绝激活 `com.apple.system_extension.network_extension` 类扩展。
+- [x] 修复辅助进程漏判：WPS 的 `promecefpluginhost` 签名标识是 `cn.wps.promecefpluginhost`，与主 App 的 `com.kingsoft.wpsoffice.mac.global` 无前缀关系；改为用 `SecCodeCopyPath` 回溯最外层 `.app` 取 Bundle ID。
+- [x] 版本号提到 2：扩展已装过旧版本时，只有版本变化才会被系统替换。
+- [x] 修正路径回溯取错 bundle 的 bug：应取路径里第一个 `.app`（最外层），取 `lastIndex` 会拿到 `promecefpluginhost.app` 自身，等于没归一。已用独立脚本验证 WPS / Chrome helper 均能归到主 App。
 
 ### 待验证（需要在真机上点一遍）
 
-- [ ] 首次勾选时扩展能装成功并获批准；状态栏走到「已生效」。
-- [ ] 目标应用确实断网，取消勾选后恢复。
-- [ ] 若扩展加载被拒，把扩展 entitlement 换成 `content-filter-provider-systemextension` 再试。
+- [x] 首次勾选时扩展能装成功并获批准；状态栏走到「已生效」。
+- [x] 目标应用确实断网（WPS 实测：点链接无法访问，日志中 helper 已归一到 `com.kingsoft.wpsoffice.mac.global`）。
+- [ ] 取消勾选后恢复联网（反向验证还没做）。
 - [ ] 确认规则变更后扩展能在不重启的情况下拿到新规则（KVO 是否真的触发）。
-- [ ] 确认扩展能否读取其它进程签名标识（`SecCodeCopyGuestWithAttributes` 在沙箱下的权限）。
+- [x] 确认扩展能读取其它进程签名标识：沙箱下 `SecCodeCopyGuestWithAttributes` 与 `SecCodeCopyPath` 均正常（日志里解析出大量进程）。
+- [x] 修正日志级别：drop 日志原为 `info`（不落盘，查不到），改为 `notice`；2 秒兜底刷新改为仅在规则变化时记录，避免刷屏。
 
 ### 下一步
 

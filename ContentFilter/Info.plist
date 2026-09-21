@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSSystemExtensionUsageDescription</key>
+	<string>iProxy 需要安装网络过滤器扩展，才能禁止指定应用访问网络。</string>
 	<key>NetworkExtension</key>
 	<dict>
 		<key>NEProviderClasses</key>

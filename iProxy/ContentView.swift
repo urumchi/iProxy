@@ -47,13 +47,15 @@ private struct ApplicationRow: View {
                 Text(application.bundleIdentifier).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            Toggle("禁止联网", isOn: Binding(
-                get: { blocked },
-                set: { store.setBlocked($0, for: application) }
+            // 开关表示「允许访问网络」：默认在右（允许），滑到左侧才拦截。
+            Toggle("允许访问网络", isOn: Binding(
+                get: { !blocked },
+                set: { store.setBlocked(!$0, for: application) }
             ))
             .toggleStyle(.switch)
             .labelsHidden()
             Text(blocked ? "已阻止" : "允许").foregroundStyle(blocked ? .red : .green).font(.caption)
+                .frame(width: 48, alignment: .trailing)
         }
         .padding(.vertical, 3)
     }
