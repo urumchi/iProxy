@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		18DD280330613F7B002F453C /* NetworkExtension.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 18B36EBA3061376A00FA7275 /* NetworkExtension.framework */; };
+		18DD280D30613F7B002F453C /* org.mktime.hmccb.iProxy.ContentFilter.systemextension in Embed System Extensions */ = {isa = PBXBuildFile; fileRef = 18DD280230613F7B002F453C /* org.mktime.hmccb.iProxy.ContentFilter.systemextension */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		18B36E70306131C000FA7275 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -21,13 +26,46 @@
 			remoteGlobalIDString = 18B36E61306131BF00FA7275;
 			remoteInfo = iProxy;
 		};
+		18DD280B30613F7B002F453C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 18B36E5A306131BF00FA7275 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 18DD280130613F7B002F453C;
+			remoteInfo = ContentFilter;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		18B36EC63061376A00FA7275 /* Embed System Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(SYSTEM_EXTENSIONS_FOLDER_PATH)";
+			dstSubfolderSpec = 16;
+			files = (
+				18DD280D30613F7B002F453C /* org.mktime.hmccb.iProxy.ContentFilter.systemextension in Embed System Extensions */,
+			);
+			name = "Embed System Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		18B36E62306131BF00FA7275 /* iProxy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iProxy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		18B36E6F306131C000FA7275 /* iProxyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iProxyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		18B36E79306131C000FA7275 /* iProxyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iProxyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		18B36EBA3061376A00FA7275 /* NetworkExtension.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = NetworkExtension.framework; path = System/Library/Frameworks/NetworkExtension.framework; sourceTree = SDKROOT; };
+		18DD280230613F7B002F453C /* org.mktime.hmccb.iProxy.ContentFilter.systemextension */ = {isa = PBXFileReference; explicitFileType = "wrapper.system-extension"; includeInIndex = 0; path = org.mktime.hmccb.iProxy.ContentFilter.systemextension; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		18DD280E30613F7B002F453C /* Exceptions for "ContentFilter" folder in "ContentFilter" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 18DD280130613F7B002F453C /* ContentFilter */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		18B36E64306131BF00FA7275 /* iProxy */ = {
@@ -43,6 +81,19 @@
 		18B36E7C306131C000FA7275 /* iProxyUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = iProxyUITests;
+			sourceTree = "<group>";
+		};
+		18B36EBC3061376A00FA7275 /* ContentFilter */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ContentFilter;
+			sourceTree = "<group>";
+		};
+		18DD280430613F7B002F453C /* ContentFilter */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				18DD280E30613F7B002F453C /* Exceptions for "ContentFilter" folder in "ContentFilter" target */,
+			);
+			path = ContentFilter;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -69,6 +120,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		18DD27FF30613F7B002F453C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				18DD280330613F7B002F453C /* NetworkExtension.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -78,6 +137,9 @@
 				18B36E64306131BF00FA7275 /* iProxy */,
 				18B36E72306131C000FA7275 /* iProxyTests */,
 				18B36E7C306131C000FA7275 /* iProxyUITests */,
+				18B36EBC3061376A00FA7275 /* ContentFilter */,
+				18DD280430613F7B002F453C /* ContentFilter */,
+				18B36EB93061376A00FA7275 /* Frameworks */,
 				18B36E63306131BF00FA7275 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -88,8 +150,17 @@
 				18B36E62306131BF00FA7275 /* iProxy.app */,
 				18B36E6F306131C000FA7275 /* iProxyTests.xctest */,
 				18B36E79306131C000FA7275 /* iProxyUITests.xctest */,
+				18DD280230613F7B002F453C /* org.mktime.hmccb.iProxy.ContentFilter.systemextension */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		18B36EB93061376A00FA7275 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				18B36EBA3061376A00FA7275 /* NetworkExtension.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -102,10 +173,12 @@
 				18B36E5E306131BF00FA7275 /* Sources */,
 				18B36E5F306131BF00FA7275 /* Frameworks */,
 				18B36E60306131BF00FA7275 /* Resources */,
+				18B36EC63061376A00FA7275 /* Embed System Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				18DD280C30613F7B002F453C /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				18B36E64306131BF00FA7275 /* iProxy */,
@@ -163,6 +236,28 @@
 			productReference = 18B36E79306131C000FA7275 /* iProxyUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		18DD280130613F7B002F453C /* ContentFilter */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 18DD280F30613F7B002F453C /* Build configuration list for PBXNativeTarget "ContentFilter" */;
+			buildPhases = (
+				18DD27FE30613F7B002F453C /* Sources */,
+				18DD27FF30613F7B002F453C /* Frameworks */,
+				18DD280030613F7B002F453C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				18DD280430613F7B002F453C /* ContentFilter */,
+			);
+			name = ContentFilter;
+			packageProductDependencies = (
+			);
+			productName = ContentFilter;
+			productReference = 18DD280230613F7B002F453C /* org.mktime.hmccb.iProxy.ContentFilter.systemextension */;
+			productType = "com.apple.product-type.system-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -175,6 +270,11 @@
 				TargetAttributes = {
 					18B36E61306131BF00FA7275 = {
 						CreatedOnToolsVersion = 26.6;
+						SystemCapabilities = {
+							com.apple.NetworkExtension = {
+								enabled = 1;
+							};
+						};
 					};
 					18B36E6E306131C000FA7275 = {
 						CreatedOnToolsVersion = 26.6;
@@ -183,6 +283,14 @@
 					18B36E78306131C000FA7275 = {
 						CreatedOnToolsVersion = 26.6;
 						TestTargetID = 18B36E61306131BF00FA7275;
+					};
+					18DD280130613F7B002F453C = {
+						CreatedOnToolsVersion = 26.6;
+						SystemCapabilities = {
+							com.apple.NetworkExtension = {
+								enabled = 1;
+							};
+						};
 					};
 				};
 			};
@@ -203,6 +311,7 @@
 				18B36E61306131BF00FA7275 /* iProxy */,
 				18B36E6E306131C000FA7275 /* iProxyTests */,
 				18B36E78306131C000FA7275 /* iProxyUITests */,
+				18DD280130613F7B002F453C /* ContentFilter */,
 			);
 		};
 /* End PBXProject section */
@@ -223,6 +332,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		18B36E77306131C000FA7275 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		18DD280030613F7B002F453C /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -253,6 +369,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		18DD27FE30613F7B002F453C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -265,6 +388,11 @@
 			isa = PBXTargetDependency;
 			target = 18B36E61306131BF00FA7275 /* iProxy */;
 			targetProxy = 18B36E7A306131C000FA7275 /* PBXContainerItemProxy */;
+		};
+		18DD280C30613F7B002F453C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 18DD280130613F7B002F453C /* ContentFilter */;
+			targetProxy = 18DD280B30613F7B002F453C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -394,6 +522,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = iProxy/iProxy.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -426,6 +555,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = iProxy/iProxy.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -533,6 +663,68 @@
 			};
 			name = Release;
 		};
+		18DD281030613F7B002F453C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ContentFilter/ContentFilter.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HE98L3L35Z;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ContentFilter/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ContentFilter;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.mktime.hmccb.iProxy.ContentFilter;
+				PRODUCT_NAME = "$(inherited)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		18DD281130613F7B002F453C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ContentFilter/ContentFilter.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HE98L3L35Z;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ContentFilter/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ContentFilter;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.mktime.hmccb.iProxy.ContentFilter;
+				PRODUCT_NAME = "$(inherited)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -568,6 +760,15 @@
 			buildConfigurations = (
 				18B36E8A306131C000FA7275 /* Debug */,
 				18B36E8B306131C000FA7275 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		18DD280F30613F7B002F453C /* Build configuration list for PBXNativeTarget "ContentFilter" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				18DD281030613F7B002F453C /* Debug */,
+				18DD281130613F7B002F453C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
