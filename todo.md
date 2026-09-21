@@ -155,6 +155,7 @@ Rule Engine
 - [ ] 确认规则变更后扩展能在不重启的情况下拿到新规则（KVO 是否真的触发）。
 - [x] 确认扩展能读取其它进程签名标识：沙箱下 `SecCodeCopyGuestWithAttributes` 与 `SecCodeCopyPath` 均正常（日志里解析出大量进程）。
 - [x] 修正日志级别：drop 日志原为 `info`（不落盘，查不到），改为 `notice`；2 秒兜底刷新改为仅在规则变化时记录，避免刷屏。
+- [x] 修复状态栏不自动刷新：`RuleStore` / `FilterConfigurationService` 是嵌套的 ObservableObject，变化不会冒泡给 `AppStore`；改为在 `AppStore.init` 里转发 `objectWillChange`，开关与状态文案即时更新。
 
 ### 下一步
 

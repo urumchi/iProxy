@@ -37,6 +37,7 @@ final class FilterConfigurationService: NSObject, ObservableObject {
     /// 下发最新规则；扩展还没装好时先安装，装好后再写配置。
     func apply(rules: [NetworkRule]) {
         pendingRules = rules
+        statusMessage = "正在应用规则…"
         if isExtensionActivated {
             savePreferences()
         } else {

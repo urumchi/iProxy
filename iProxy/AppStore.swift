@@ -10,6 +10,19 @@ final class AppStore: ObservableObject {
     let rules = RuleStore()
     let filter = FilterConfigurationService()
 
+    private var cancellables: Set<AnyCancellable> = []
+
+    init() {
+        // 嵌套的 ObservableObject 不会把变化冒泡给 AppStore：
+        // 不转发的话，开关和状态栏文案要等 AppStore 自身属性变化（例如点「重新扫描」）才刷新。
+        rules.objectWillChange
+            .sink { [weak self] in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+        filter.objectWillChange
+            .sink { [weak self] in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+    }
+
     var visibleApplications: [ManagedApplication] {
         guard !searchText.isEmpty else { return applications }
         return applications.filter {
