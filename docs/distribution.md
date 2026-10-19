@@ -1,153 +1,132 @@
 # 分发指南（App Store 之外）
 
-iProxy 可以不经 App Store 审核，用 Developer ID 签名 + 公证后直接发布给用户下载。但本 App 内嵌了 `NEFilterDataProvider` 系统扩展，整套流程和普通 App 有本质区别，下面的顺序不要跳过。
+iProxy 使用 `NEFilterDataProvider` 系统扩展，Developer ID 分发需要正确的网络扩展权限、Direct 配置描述文件、公证和票据装订。仓库里的 `scripts/package-direct.sh` 已经把归档、重签、校验、zip 和 dmg 生成串成一条可重复执行的流程。
 
-## 0. 关键卡点：受限权限的授权范围
+## 权限值差异
 
-两个 entitlement 属于 Apple 的受限权限，必须由 Apple 授权后才能签名使用：
+`com.apple.developer.networking.networkextension` 在两种签名方式下使用不同的值：
 
-- `com.apple.developer.networking.networkextension` = `content-filter-provider`（主 App 与扩展都要）
-- `com.apple.developer.system-extension.install`（主 App 需要，用于安装扩展）
+| 签名方式 | 权限值 | 配置描述文件 |
+| --- | --- | --- |
+| 开发签名 | `content-filter-provider` | `Mac Team Provisioning Profile` |
+| Developer ID 分发 | `content-filter-provider-systemextension` | `Mac Team Direct Provisioning Profile` |
 
-**App Store 分发和 Developer ID 分发是两条独立的授权线。** 本地开发能跑只说明开发用 provisioning profile 里有这两项权限，不代表 Developer ID 线已开通。走这条路之前先通过 Apple 的 entitlement 申请流程确认 Developer ID 权限已获批，再生成对应的 Developer ID provisioning profile。这是整个方案能否成立的唯一前置条件，其余步骤都建立在它之上。
+主 App 还需要 `com.apple.developer.system-extension.install`，用于安装系统扩展。主 App 的沙盒和用户选择文件只读权限写在 `iProxy/iProxy-Distribution.entitlements` 中，系统扩展的沙盒权限写在 `ContentFilter/ContentFilter-Distribution.entitlements` 中。两个文件还显式写入 `com.apple.application-identifier` 与 `com.apple.developer.team-identifier`，与 Direct 配置描述文件中的值一致。
 
-## 1. 签名准备
+报错
 
-加入 Apple Developer Program，然后在 Xcode > Settings > Accounts > Manage Certificates 里创建：
+```text
+Provisioning profile "Mac Team Direct Provisioning Profile: org.mktime.hmccb.iProxy.ContentFilter"
+doesn't match the entitlements file's value for the com.apple.developer.networking.networkextension entitlement.
+```
 
-- **Developer ID Application**：签主 App 和系统扩展本体。
-- **Developer ID Installer**：仅在制作 `.pkg` 时需要。
+的原因是归档产物仍然写着 `content-filter-provider`，而 Direct 配置描述文件只授予 `content-filter-provider-systemextension`。Xcode 在导出阶段逐个比较这两组值，遇到不一致就停止。
 
-当前工程 `DEVELOPMENT_TEAM = HE98L3L35Z`、`CODE_SIGN_STYLE = Automatic`、`ENABLE_HARDENED_RUNTIME = YES`。加固运行时是公证的前置条件，已满足，无需改动。
+工程的 Debug 与 Release 继续使用开发用 entitlements，保证日常运行和归档正常。Developer ID 专用 entitlements 只在打包脚本重签阶段使用。
 
-### 显式声明 entitlements
+## 打包
 
-注意一个容易被忽略的差异：`iProxy/iProxy.entitlements` 里只有上面两项，但当前签名产物里还带了 `com.apple.security.app-sandbox` 和 `com.apple.security.files.user-selected.read-only`——这两项是随开发用 provisioning profile 一起进来的。
+先确认本机钥匙串中有当前团队的 `Developer ID Application` 证书及私钥：
 
-Developer ID 的 profile 不会自动补这两项，所以要在 entitlements 文件里显式写清楚真正需要的权限，否则换成 Developer ID 签名后沙盒行为会变，文件访问可能直接被拒。
+```sh
+security find-identity -v -p codesigning | grep "Developer ID Application"
+```
 
-## 2. 出包
-
-必须走归档流程，不要直接分发 Debug 产物（Debug 带 `get-task-allow`，且 `ONLY_ACTIVE_ARCH = YES` 只出 arm64）。
+执行：
 
 ```sh
 cd /Users/apple/Documents/iProxy
-
-xcodebuild -project iProxy.xcodeproj -scheme iProxy \
-  -configuration Release -destination 'platform=macOS' \
-  -archivePath build/iProxy.xcarchive archive
+./scripts/package-direct.sh
 ```
 
-导出用的 `ExportOptions.plist`：
+脚本依次完成：
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>method</key>
-	<string>developer-id</string>
-	<key>teamID</key>
-	<string>HE98L3L35Z</string>
-	<key>signingStyle</key>
-	<string>automatic</string>
-	<key>destination</key>
-	<string>export</string>
-</dict>
-</plist>
+1. 用 Release 配置归档，产物包含 arm64 与 x86_64。
+2. 从归档复制出独立的 `iProxy.app` 到 `build/direct/`。
+3. 把两个 Mac Team Direct 配置描述文件分别嵌入主 App 和系统扩展。
+4. 先用 `ContentFilter-Distribution.entitlements` 重签系统扩展，再用 `iProxy-Distribution.entitlements` 重签主 App。
+5. 校验签名、权限值、通用架构以及 `get-task-allow` 是否存在。
+6. 生成 `build/iProxy.zip` 与 `build/iProxy.dmg`。
+
+输出位置：
+
+```text
+build/direct/iProxy.app
+build/iProxy.zip
+build/iProxy.dmg
 ```
+
+Xcode 的自动签名会把归档签成开发签名。Direct 配置描述文件由 Xcode 管理，Xcode 的手动签名模式会拒绝使用它们；`codesign` 可以直接使用这些配置描述文件完成 Developer ID 重签。因此发布产物由脚本生成，Organizer 中的 Direct Distribution 导出步骤不再作为发布路径。
+
+如果已经在 Xcode 中完成归档，可以让脚本复用现有归档：
 
 ```sh
-xcodebuild -exportArchive -archivePath build/iProxy.xcarchive \
-  -exportOptionsPlist ExportOptions.plist \
-  -exportPath build/export
+ARCHIVE_PATH="$HOME/Library/Developer/Xcode/Archives/2026-10-19/iProxy 2026-10-19, 17.16.xcarchive" \
+  ./scripts/package-direct.sh
 ```
 
-图形界面等价操作：scheme 切到 Release → Product > Archive → Organizer → Distribute App → **Developer ID** → 勾选上传公证 → Export。
+脚本按名称查找 `Mac Team Direct Provisioning Profile: <bundle id>`，并检查配置描述文件中的 `application-identifier` 与 `content-filter-provider-systemextension`。需要指定其他配置描述文件时，使用 `MAIN_PROFILE` 与 `EXTENSION_PROFILE` 环境变量。
 
-### 分发载体
+## 公证
 
-推荐 `.dmg`（用户拖进 `/Applications`），做 `.pkg` 则需 Developer ID Installer 签名，裸 `.app` 打 zip 也可以：
-
-```sh
-hdiutil create -volname iProxy -srcfolder build/export/iProxy.app \
-  -ov -format UDZO build/iProxy.dmg
-
-ditto -c -k --sequesterRsrc --keepParent build/export/iProxy.app build/iProxy.zip
-```
-
-## 3. 公证与 staple
-
-不公证的话，用户下载后会被 Gatekeeper 拦下提示「无法验证开发者」。先用 App 专用密码或 App Store Connect API Key 存一份 notarytool 凭据：
+没有公证的 Developer ID 产物会被 Gatekeeper 拒绝，`spctl` 会显示 `Unnotarized Developer ID`。先保存 notarytool 凭据：
 
 ```sh
-xcrun notarytool store-credentials "iproxy-notary" \
-  --apple-id <你的 Apple ID> \
+xcrun notarytool store-credentials iproxy-notary \
+  --apple-id <Apple ID> \
   --team-id HE98L3L35Z \
   --password <App 专用密码>
 ```
 
-顺序是「先公证 app 并钉票据，再做 dmg 并对 dmg 本身公证 + staple」。两段都做最稳妥，只钉 dmg 的话用户离线时可能校验不过。
+再执行完整打包与公证：
 
 ```sh
-# 1. 公证 app，把票据钉进 app 本体
-xcrun notarytool submit build/iProxy.zip --keychain-profile iproxy-notary --wait
-xcrun stapler staple build/export/iProxy.app
-
-# 2. 用已钉票据的 app 做 dmg，再公证 + 钉票据
-hdiutil create -volname iProxy -srcfolder build/export/iProxy.app \
-  -ov -format UDZO build/iProxy.dmg
-xcrun notarytool submit build/iProxy.dmg --keychain-profile iproxy-notary --wait
-xcrun stapler staple build/iProxy.dmg
+NOTARY_PROFILE=iproxy-notary ./scripts/package-direct.sh
 ```
 
-验证：
+脚本会先提交 zip 并装订 App 的票据，然后用已装订的 App 重新生成 zip 和 dmg，再提交 dmg 并装订 dmg 的票据。完成后的校验命令：
 
 ```sh
+xcrun stapler validate build/direct/iProxy.app
 xcrun stapler validate build/iProxy.dmg
-spctl -a -vvv -t install build/iProxy.dmg
-spctl -a -vvv -t exec /Applications/iProxy.app
-```
-
-## 4. 架构与部署目标
-
-两项配置会直接决定有多少人装得上：
-
-- `MACOSX_DEPLOYMENT_TARGET = 26.5` 会把用户限制在 macOS 26.5 及以上，受众极小。NetworkExtension 的 API 本身不新，部署目标大概率能下调很多，改完回归一遍拦截逻辑即可。
-- Debug 配了 `ONLY_ACTIVE_ARCH = YES`，产物是 thin arm64，Intel Mac 跑不了。Release 归档默认标准架构（arm64 + x86_64），归档后用 `lipo -info` 确认：
-
-```sh
-lipo -info build/export/iProxy.app/Contents/MacOS/iProxy
-codesign -d --entitlements - build/export/iProxy.app   # 确认没有 get-task-allow
-```
-
-## 5. 用户侧安装体验
-
-装完不等于生效，这几点必须写进下载页的说明，否则反馈区会全是「没起作用」：
-
-1. 把 `iProxy.app` 放进 `/Applications`（系统扩展要求宿主 App 位于稳定位置，否则激活会失败并报 `App containing System Extension to be activated must be in /Applications folder`）。
-2. 首次启动后触发系统扩展激活请求，App 顶部状态栏会提示。
-3. 到「系统设置 → 通用 → 登录项与扩展」手动批准 iProxy 的扩展，可能需要管理员密码。
-4. 允许内容过滤器后，状态栏出现「已生效：N 个应用被禁止联网」才算成功。
-5. 升级到新版本时，系统扩展可能还需要重新批准一次。
-
-## 6. 托管与自动更新
-
-GitHub Releases 或对象存储（Cloudflare R2、S3）都可以，下载页给出 SHA-256 校验值：
-
-```sh
+spctl -a -vvv -t exec build/direct/iProxy.app
+spctl -a -vvv -t open --context context:primary-signature build/iProxy.dmg
 shasum -a 256 build/iProxy.dmg
 ```
 
-自动更新用 Sparkle（EdDSA 签名 + 托管 `appcast.xml`）。注意更新会把内嵌的系统扩展一起替换，更新逻辑要覆盖扩展版本，并提示用户可能需重新授权。
+## 脚本中的关键签名命令
 
-## 7. 发版检查清单
+需要排查签名问题时，可以按下面的顺序手工执行。两个 `codesign` 的顺序不能交换，系统扩展必须先完成签名。
 
-- [ ] Developer ID 线的 entitlement 授权已确认，Developer ID provisioning profile 可用
-- [ ] `iProxy.entitlements` 已显式声明需要的沙盒权限
-- [ ] Release 配置归档，产物为 universal（arm64 + x86_64）
-- [ ] 签名 Entitlements 无 `get-task-allow`
-- [ ] app 与 dmg 均已完成公证并 staple
-- [ ] `spctl` 校验通过
-- [ ] 下载页写明 `/Applications` 安装位置与系统扩展批准步骤
-- [ ] 已发布 SHA-256 校验值
+```sh
+codesign --force --timestamp --options runtime \
+  --entitlements ContentFilter/ContentFilter-Distribution.entitlements \
+  --sign "Developer ID Application: <证书名称>" \
+  build/direct/iProxy.app/Contents/Library/SystemExtensions/org.mktime.hmccb.iProxy.ContentFilter.systemextension
+
+codesign --force --timestamp --options runtime \
+  --entitlements iProxy/iProxy-Distribution.entitlements \
+  --sign "Developer ID Application: <证书名称>" \
+  build/direct/iProxy.app
+
+codesign --verify --deep --strict --verbose=2 build/direct/iProxy.app
+```
+
+## 用户安装
+
+1. 把 `iProxy.app` 放进 `/Applications`。系统扩展要求宿主 App 位于这个目录，放在其他位置会激活失败。
+2. 首次启动后勾选某个应用的「禁止联网」，触发系统扩展安装。
+3. 到「系统设置 → 通用 → 登录项与扩展」批准 iProxy 的扩展，可能需要管理员密码。
+4. 状态栏出现「已生效：N 个应用被禁止联网」后再验证目标应用是否被阻断。
+5. 升级版本后，系统扩展可能需要重新批准一次。
+
+## 发布前检查
+
+- `security find-identity -v -p codesigning` 能看到当前团队的 `Developer ID Application`。
+- `Mac Team Direct Provisioning Profile` 的主 App 与系统扩展配置描述文件都存在且未过期。
+- `lipo -info` 显示主 App 与系统扩展都包含 `arm64` 和 `x86_64`。
+- 签名权限包含 `content-filter-provider-systemextension`，并且没有 `get-task-allow`。
+- App 与 dmg 都完成公证，`stapler validate` 与 `spctl` 校验通过。
+- 下载页给出 dmg 的 SHA-256 校验值。
+
+当前工程的 `MACOSX_DEPLOYMENT_TARGET = 13.0`。主 App 和系统扩展都是 `arm64` 和 `x86_64` 通用二进制，支持能运行 macOS 13.0 及以上的 Apple Silicon Mac 和 Intel Mac。Intel Mac 的最低系统版本同样是 macOS 13.0；macOS 12 及更早版本不能启动这个产物。Intel Mac 上的系统扩展安装、批准和网络拦截流程仍需要在真实 Intel 机器上回归一次。

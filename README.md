@@ -1,62 +1,193 @@
+**English** | [简体中文](README.zh-CN.md)
+
 # iProxy
 
-macOS 应用级网络访问控制工具。列出本机应用，逐个开关该应用的网络访问。
+Application-level network access control for macOS. List local applications and decide per app whether new TCP/UDP connections are allowed.
 
-当前已经跑通「最小闭环」：勾选某个应用 → 规则经 `NEFilterManager` 下发给 Content Filter 系统扩展 → 该应用新发起的网络连接被 `.drop()`；取消勾选即恢复。
+<p align="center">
+  <img src="docs/iProxy.png" alt="iProxy main window" width="900">
+</p>
+
+<p align="center">
+  <a href="docs/iproxy.mp4">Watch the 18-second demo video</a>
+</p>
+
+`macOS 13.0+` · `Universal (arm64 / x86_64)` · `SwiftUI + NetworkExtension`
+
+> The app UI is currently in Simplified Chinese.
+
+The core flow is implemented: turning off "Allow network access" for an app sends a rule through `NEFilterManager` to the Content Filter system extension, and new connections from that app are dropped with `.drop()`. Turning the switch back on restores access.
+
+## Features
+
+- Per-app network access control. The switch represents "Allow network access".
+- Search by app name or bundle ID, and rescan the app list.
+- Rules are stored locally and loaded again after the app restarts.
+- Helper processes inside an app bundle are normalized to the outermost `.app` bundle, including common WPS, Chromium, and CEF helpers.
+- Filtering is implemented with a system extension; no kernel extension is installed.
+- Universal binary with arm64 and x86_64 slices for Apple Silicon and Intel Macs.
+
+## Requirements
+
+| Item | Requirement |
+| --- | --- |
+| Runtime | macOS 13.0 or later |
+| Processor | Apple Silicon or Intel |
+| Permissions | Install and approve the Content Filter system extension |
+| Build tools | Xcode 26.6 or a compatible version |
+| Distribution | Developer ID Application, Direct provisioning profile, notarization |
+
+Intel Macs must run macOS 13.0 or later. Intel Macs that remain on macOS 12 or earlier cannot run this build.
+
+## Installation
+
+Obtain `iProxy.dmg` from a maintainer. If the repository publishes GitHub Releases, use the latest notarized dmg.
+
+1. Open the dmg and drag `iProxy.app` into `/Applications`.
+2. Launch `/Applications/iProxy.app`. The system extension requires the host app to be in this folder.
+3. The first time you turn off "Allow network access" for an app, macOS prompts you to install the extension.
+4. Open System Settings → General → Login Items & Extensions and approve the iProxy extension. An administrator password may be required.
+5. The status text at the top of the window shows the number of blocked apps. New connections from a blocked app are then dropped.
+
+Developer ID builds must be notarized and stapled. An un-notarized build reports `code signature invalid` when installing the system extension; this usually means the notarization check failed.
+
+## Usage
+
+The main window lists apps from `/Applications`, `/System/Applications`, `/System/Applications/Utilities`, and `~/Applications`.
+
+- The switch is on when it is positioned to the right, which means network access is allowed.
+- Turning it off blocks new connections from that app.
+- The search field filters by app name or bundle ID.
+- "Rescan" refreshes the app list.
+
+Rules are stored in the app sandbox container:
+
+```text
+~/Library/Containers/org.mktime.hmccb.iProxy/Data/Library/Application Support/iProxy/rules.json
+```
+
+## How It Works
+
+```mermaid
+flowchart LR
+    UI[SwiftUI App] --> Rules[RuleStore]
+    UI --> Manager[NEFilterManager]
+    Manager --> Extension[Content Filter System Extension]
+    Extension --> Decision{Rule match?}
+    Decision -->|Yes| Drop[.drop]
+    Decision -->|No| Allow[.allow]
+```
+
+The main app does not decide each network flow. It installs the extension and publishes rules:
+
+1. `RuleStore` persists "bundle ID → allow / drop" as JSON.
+2. `FilterConfigurationService` installs the extension with `OSSystemExtensionRequest`, then writes rules into `NEFilterProviderConfiguration.vendorConfiguration` through `NEFilterManager.saveToPreferences`.
+3. `FilterDataProvider` reads `vendorConfiguration["rules"]` in `startFilter`, follows configuration changes through KVO, and performs a fallback refresh every 2 seconds.
+4. For each new connection, the extension uses `flow.sourceAppAuditToken` to resolve the source process. It first walks up to the outermost `.app` bundle with `SecCodeCopyPath`; if that fails, it uses the process's own signing identifier.
+5. A matching rule returns `.drop()`; otherwise the extension returns `.allow()`. If the source process cannot be resolved, the connection is allowed to avoid disrupting system traffic.
+
+The main app and the system extension both request `com.apple.developer.networking.networkextension`. Development signing uses `content-filter-provider`; Developer ID distribution uses `content-filter-provider-systemextension`. The main app also needs `com.apple.developer.system-extension.install` to install the extension.
+
+## Build From Source
+
+Clone the repository and run the following command from the repository root:
+
+> This project is configured for team `HE98L3L35Z` and bundle ID `org.mktime.hmccb.iProxy`. External developers must replace the team ID and bundle ID, update the `application-identifier` values in both `*-Distribution.entitlements` files, and request the Network Extension entitlement from Apple before they can produce a working system-extension build.
 
 ```sh
 xcodebuild -project iProxy.xcodeproj -scheme iProxy -configuration Debug \
   -derivedDataPath build build
+```
 
-# 系统扩展要求宿主 App 必须位于 /Applications
-rm -rf /Applications/iProxy.app
+After building, copy the app into `/Applications`. The system extension cannot be activated from `build/` or DerivedData:
+
+```sh
+osascript -e 'tell application id "org.mktime.hmccb.iProxy" to quit'
 ditto build/Build/Products/Debug/iProxy.app /Applications/iProxy.app
 open /Applications/iProxy.app
 ```
 
-**不要**直接从 `build/` 或 DerivedData 里运行 App，否则安装扩展会失败并报 `App containing System Extension to be activated must be in /Applications folder`。用 Xcode ⌘R 开发时同理：产物在 DerivedData 里，要从那里拷到 `/Applications` 再运行。每次重新构建后都要重新拷贝，拷贝前先退出正在运行的 iProxy，否则 LaunchServices 只会把旧实例调到前台。
+If an older iProxy instance is already running, quit it first. LaunchServices may otherwise bring the old window to the front instead of launching the new build.
 
-`build/` 只是产物目录，建议加进 `.gitignore`（仓库目前还没有）。
+Debug builds on Apple Silicon produce arm64 only by default. To distribute to Intel Macs, use the Release configuration and `scripts/package-direct.sh`, or build a universal binary explicitly.
 
-## 首次使用需要授权
+### Tests
 
-1. 从 `/Applications/iProxy.app` 启动，确认列表里出现应用。
-2. 打开任意应用的「禁止联网」开关。第一次会触发系统扩展安装，App 顶部状态栏会提示。
-3. 到「系统设置 → 通用 → 登录项与扩展」允许 iProxy 的扩展（可能需要管理员密码），随后系统会要求允许该内容过滤器。
-4. 状态栏出现「已生效：N 个应用被禁止联网」即已生效。此时目标应用应无法联网，关掉开关后恢复。
+```sh
+xcodebuild -project iProxy.xcodeproj -scheme iProxy test \
+  -destination 'platform=macOS'
+```
 
-调试日志：
+## Distribution
+
+Developer ID distribution uses a separate signing flow:
+
+```sh
+./scripts/package-direct.sh
+```
+
+The script archives with the Release configuration, embeds the Direct provisioning profiles, re-signs the main app and system extension with Developer ID, validates entitlements and architectures, and produces:
+
+```text
+build/direct/iProxy.app
+build/iProxy.zip
+build/iProxy.dmg
+```
+
+Notarization is required before public distribution:
+
+```sh
+NOTARY_PROFILE=iproxy-notary ./scripts/package-direct.sh
+```
+
+See [docs/distribution.md](docs/distribution.md) for entitlement values, provisioning profiles, notarization, and verification steps. The detailed distribution guide is currently in Simplified Chinese.
+
+## Project Layout
+
+| Path | Description |
+| --- | --- |
+| `README.md` / `README.zh-CN.md` | English and Simplified Chinese documentation |
+| `iProxy/` | SwiftUI app, rule storage, app scanning, and filter configuration |
+| `ContentFilter/` | `NEFilterDataProvider` system extension |
+| `iProxyTests/` | Swift Testing unit tests |
+| `iProxyUITests/` | XCTest UI tests |
+| `scripts/package-direct.sh` | Developer ID archive, re-signing, notarization, and dmg generation |
+| `docs/distribution.md` | Distribution and notarization guide |
+
+## Limitations
+
+- Rules are matched by app only; domain, IP address, and port rules are not supported.
+- Helper processes inside an app bundle are normalized by walking up the path; system processes hosted outside an app bundle may be missed.
+- If the audit token or code signing identity cannot be resolved, the connection is allowed (fail open).
+- The system extension requires manual approval. Re-approval may be needed after an upgrade.
+- The current build supports macOS 13.0 or later only.
+- Rules are stored in a local JSON file. App Group synchronization, rule import/export, and auto-update are not implemented.
+
+## Privacy
+
+- Rules are stored on the local Mac. The current code contains no telemetry or remote reporting.
+- The system extension returns allow / drop based on the source app. It does not parse or upload network content.
+- Users can revoke the extension at any time in System Settings.
+
+## Troubleshooting
+
+- **The system extension fails with `code signature invalid`**: Make sure the copy in `/Applications` is a notarized Developer ID build. Check `spctl -a -vvv -t exec /Applications/iProxy.app`; if it reports `Unnotarized Developer ID`, complete the notarization flow and replace the old copy with the new build.
+- **The app must be in `/Applications`**: Copy it into `/Applications`, quit the old instance, and launch it again.
+- **The extension stays pending approval**: Open System Settings → General → Login Items & Extensions and approve iProxy's extension. If the status shows `waiting to uninstall on reboot`, reboot the Mac once.
+- **The app list is empty**: Check that the app has permission to read `/Applications` and review the app logs. An older macOS version can also cause compatibility problems.
+- **Rules do not take effect**: Check the logs for "rules updated" and "blocked" entries. If there are no provider logs, the extension is not approved or not running.
+- **`NSSystemExtensionUsageDescription` is missing**: Both the main app and extension Info.plist files need this key. The main app generates it through the `INFOPLIST_KEY_NSSystemExtensionUsageDescription` build setting.
+
+View logs:
 
 ```sh
 log stream --predicate 'subsystem == "org.mktime.hmccb.iProxy"' --level info
 ```
 
-## 工作原理
+## Feedback
 
-主 App 不参与判定，只负责下发规则和安装扩展：
+When reporting an issue, include the macOS version, processor architecture, iProxy version, reproduction steps, and relevant logs. For system extension installation failures, also include the output of `systemextensionsctl list` and `codesign --verify --verbose=4 /Applications/iProxy.app`.
 
-1. `RuleStore` 把「Bundle ID → allow / drop」存成 JSON。
-2. `FilterConfigurationService` 用 `OSSystemExtensionRequest` 安装扩展，再用 `NEFilterManager.saveToPreferences` 把规则写进 `NEFilterProviderConfiguration.vendorConfiguration`，并置 `isEnabled = true`、`filterSockets = true`。
-3. 扩展进程 `FilterDataProvider` 在 `startFilter` 读取 `vendorConfiguration["rules"]`，之后由 KVO（加 2 秒兜底刷新）跟随配置变化。
-4. 每条新 flow 到来时，用 `flow.sourceAppAuditToken` 反查进程身份：先用 `SecCodeCopyPath` 回溯到最外层 `.app` 取其 Bundle ID（这样 WPS 的 `promecefpluginhost`、各类 CEF / helper 都会归到用户勾选的那个 App），拿不到再退回进程自身的签名标识。命中规则返回 `.drop()`，否则 `.allow()`。macOS 上 `NEFilterFlow` 没有 iOS 的 `sourceAppIdentifier`，只有 audit token。
-5. 取不到来源应用标识时一律放行（fail open），避免误伤系统流量。
+## License
 
-主 App 与扩展都申请了 `com.apple.developer.networking.networkextension` 的 `content-filter-provider`；主 App 另外需要 `com.apple.developer.system-extension.install` 才能安装扩展。
-
-## 已知限制
-
-- 只按「应用」匹配：嵌套在 App 包内的辅助进程（WPS 的 `promecefpluginhost`、`cn.wps.wpscloudsvr` 等）靠回溯最外层 `.app` 归一，但 WebKit 这类宿主在 App 包之外的系统进程仍会漏判。
-- fail open：拿不到 audit token 或签名标识的 flow 不会被拦截。
-- 需要 Apple 签名与用户手动批准，未签名或本地 ad-hoc 构建无法启用扩展。
-
-## 故障排查
-
-- 列表为空：App Sandbox 可能挡住了 `/Applications` 枚举，可关掉主 App 的 App Sandbox，或改用 LaunchServices 列举。
-- 停留在「扩展安装失败」：确认主 App 有 `system-extension.install`，签名是 Apple Development / Developer ID；若报错与 entitlement 有关，再把扩展的 entitlement 换成 `content-filter-provider-systemextension` 试一次。
-- 报「must be in /Applications folder」：App 没放在 `/Applications`，按上面的运行步骤拷贝后重开。
-- 报「require the presence of the 'NSSystemExtensionUsageDescription' property」：Info.plist 缺这个 key，主 App（`INFOPLIST_KEY_NSSystemExtensionUsageDescription` 构建设置）与扩展（`ContentFilter/Info.plist`）各需一份。
-- 勾选后不生效：看日志。出现「当前拦截 N 个应用」说明扩展在跑且规则已到；只有「当前拦截 0 个应用」说明规则没下发；完全没有 provider 日志说明扩展未获批准或未运行。
-
-## 规则存储
-
-规则目前存在 App 沙箱容器内 `~/Library/Containers/org.mktime.hmccb.iProxy/Data/Library/Application Support/iProxy/rules.json`，便于先完成单机最小闭环；生产版可替换为 SQLite + App Group，并改为 provider 侧的可靠同步通道（见 `todo.md`）。
+This project is licensed under the [MIT License](LICENSE).
